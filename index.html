@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Expression Detection</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      overflow-x: hidden;
+    }
+
+    #video {
+      width: 100vw;
+      max-width: 700px;
+      border-radius: 12px;
+      margin-top: 15px;
+    }
+
+    #canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      max-width: 700px;
+      pointer-events: none;
+    }
+
+    #status {
+      margin-top: 15px;
+      font-size: 20px;
+    }
+
+    #wrapper {
+      position: relative;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Real-Time Expression Detection</h2>
+
+<div id="wrapper">
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="canvas"></canvas>
+</div>
+
+<div id="status">Loading AI models...</div>
+
+<!-- Face API JS -->
+<script src="https://unpkg.com/face-api.js"></script>
+
+<script>
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const statusBox = document.getElementById("status");
+
+  async function loadModels() {
+    statusBox.innerText = "Downloading AI models...";
+
+    const url = "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js/models";
+
+    await faceapi.nets.tinyFaceDetector.loadFromUri(url);
+    await faceapi.nets.faceExpressionNet.loadFromUri(url);
+
+    statusBox.innerText = "Models Loaded ✓ Starting Camera...";
+    startCamera();
+  }
+
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" }
+      });
+
+      video.srcObject = stream;
+      video.onloadedmetadata = () => {
+        video.play();
+        startDetection();
+      };
+
+    } catch (err) {
+      statusBox.innerText = "Camera Error: " + err;
+    }
+  }
+
+  async function startDetection() {
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+    resizeCanvas();
+
+    setInterval(async () => {
+      const detection = await faceapi
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+        .withFaceExpressions();
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (detection) {
+        faceapi.draw.drawDetections(canvas, detection);
+        faceapi.draw.drawFaceExpressions(canvas, detection);
+
+        const expressions = detection.expressions;
+        const best = Object.keys(expressions).reduce((a, b) =>
+          expressions[a] > expressions[b] ? a : b
+        );
+
+        statusBox.innerText = "Expression: " + best.toUpperCase();
+
+      } else {
+        statusBox.innerText = "No Face Detected";
+      }
+    }, 150);
+  }
+
+  loadModels();
+</script>
+
+</body>
+</html>
