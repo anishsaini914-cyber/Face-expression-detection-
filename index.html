@@ -34,6 +34,7 @@
     #status {
       margin-top: 15px;
       font-size: 20px;
+      font-weight: bold;
     }
 
     #wrapper {
@@ -61,13 +62,14 @@
   const canvas = document.getElementById("canvas");
   const statusBox = document.getElementById("status");
 
+  // FIXED MODEL URL (2025 working)
+  const MODEL_URL = "https://cdn.jsdelivr.net/npm/face-api.js/models";
+
   async function loadModels() {
     statusBox.innerText = "Downloading AI models...";
 
-    const url = "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js/models";
-
-    await faceapi.nets.tinyFaceDetector.loadFromUri(url);
-    await faceapi.nets.faceExpressionNet.loadFromUri(url);
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
 
     statusBox.innerText = "Models Loaded ✓ Starting Camera...";
     startCamera();
@@ -80,6 +82,7 @@
       });
 
       video.srcObject = stream;
+
       video.onloadedmetadata = () => {
         video.play();
         startDetection();
@@ -87,6 +90,7 @@
 
     } catch (err) {
       statusBox.innerText = "Camera Error: " + err;
+      console.error(err);
     }
   }
 
@@ -97,6 +101,7 @@
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
     }
+
     resizeCanvas();
 
     setInterval(async () => {
@@ -111,11 +116,10 @@
         faceapi.draw.drawFaceExpressions(canvas, detection);
 
         const expressions = detection.expressions;
-        const best = Object.keys(expressions).reduce((a, b) =>
-          expressions[a] > expressions[b] ? a : b
-        );
+        const bestExpression = Object.keys(expressions)
+          .reduce((a, b) => expressions[a] > expressions[b] ? a : b);
 
-        statusBox.innerText = "Expression: " + best.toUpperCase();
+        statusBox.innerText = "Expression: " + bestExpression.toUpperCase();
 
       } else {
         statusBox.innerText = "No Face Detected";
